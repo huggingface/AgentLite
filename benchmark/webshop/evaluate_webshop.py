@@ -1,5 +1,5 @@
 from typing import List
-
+from tqdm.auto import tqdm
 import os
 import argparse
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     # running webshop evaluation
     with open(REWARD_LOG_FILE, "a") as f:
-        for i in evaluate_ids:
+        for i in tqdm(evaluate_ids):
             reward, subreward, task = evaluate(i, llm_name=args.llm, agent_arch=args.agent_arch, PROMPT_DEBUG_FLAG=args.debug)
             rewards.append(reward)
             reward_str = f"""{i}\t{task}\t{subreward}\t{reward}\n"""
