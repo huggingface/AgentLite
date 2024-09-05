@@ -2,16 +2,16 @@
 
 ## Run on an interactive node
 
-In an interactive node, run:
+In an interactive node, run from the root of the repo:
 
 ```shell
-./launch_webshop.slurm Salesforce/xLAM-v0.1-r
+./benchmark/webshop/launch_webshop.slurm Salesforce/xLAM-v0.1-r
 ```
 
 ## Launch a Slurm job
 
-To launch a job, run:
+To launch a job, run from the root of the repo:
 
 ```shell
-sbatch --job-name=webshop launch_webshop.slurm Salesforce/xLAM-v0.1-r
+sbatch --job-name=webshop benchmark/webshop/launch_webshop.slurm Salesforce/xLAM-v0.1-r
 ```

@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --ntasks-per-node=1
+#SBATCH --exclusive
 #SBATCH --gres=gpu:8
 #SBATCH --partition=hopper-prod
 #SBATCH --output=/fsx/h4/logs/%x-%j.out
@@ -13,15 +14,18 @@ source ~/.bashrc
 conda activate agentlite
 
 MODEL_ID=$1
+AGENT_ARCH=${2:-act}
 
 # Set the default directory path for AgentBoard
 AGENTBOARD_DIR="/fsx/lewis/git/AgentBoard/agentboard/environment/WebShop"
 
+HUB_REPO_ID="HuggingFaceH4/webshop-evals"
+
 # Start WebShop server in tmux session called `webshop`
-./start_webshop_server.sh "$AGENTBOARD_DIR"
+./benchmark/webshop/start_webshop_server.sh "$AGENTBOARD_DIR"
 
 # Test it is up and running
-sleep 10
+sleep 30
 curl -v http://127.0.0.1:3000/abc
 
 # Start the vllm server in the background
@@ -59,11 +63,17 @@ done
 echo "vLLM server is up and running."
 
 # Run evaluation script
-python evaluate_webshop.py --llm $MODEL_ID --agent_arch act
-
-# TODO: compute success rate and push results to the Hub
+python benchmark/webshop/evaluate_webshop.py --llm $MODEL_ID --agent_arch $AGENT_ARCH
 
 # Stop the vllm server
 shutdown_server
+
+# Push results to the Hub
+RESULTS_FILEPATH=$(find eval_results/$MODEL_ID -type f \( -name "*.csv" \))
+TIMESTAMP=$(date +"%Y-%m-%dT%H-%M-%S")
+huggingface-cli upload --repo-type dataset --private $HUB_REPO_ID $RESULTS_FILEPATH eval_results/$MODEL_ID/results_$AGENT_ARCH\_$TIMESTAMP.csv
+
+# Delete local file
+rm $RESULTS_FILEPATH
 
 echo "Done!"
