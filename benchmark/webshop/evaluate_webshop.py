@@ -1,7 +1,8 @@
 from typing import List
-
+from tqdm.auto import tqdm
 import os
 import argparse
+import pandas as pd
 
 from webshop_agents import WebshopAgent
 from webshop_env import Webshop
@@ -16,6 +17,12 @@ from agentlite.llm.LLMConfig import LLMConfig
 from agentlite.logging.terminal_logger import AgentLogger
 
 webshop_env = Webshop()
+
+EVAL_RESULTS_DIR = "eval_results"
+# Get full path of the directory and create it if it does not exist
+if not os.path.exists(EVAL_RESULTS_DIR):
+    os.makedirs(EVAL_RESULTS_DIR)
+
 # =============================== start of webshop agent designing =============================== #
 
 def evaluate(idx: int, llm_name="gpt-3.5-turbo-16k-0613", agent_arch="react", PROMPT_DEBUG_FLAG=False):
@@ -88,7 +95,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     rewards = []
     all_task_ids = list(range(0, 251))
-    REWARD_LOG_FILE = f"{args.llm}_{args.agent_arch}_results_webshop.csv"
+
+    EVAL_RESULTS_DIR = os.path.join(EVAL_RESULTS_DIR, args.llm)
+    if not os.path.exists(EVAL_RESULTS_DIR):
+        os.makedirs(EVAL_RESULTS_DIR)
+    REWARD_LOG_FILE = os.path.join(EVAL_RESULTS_DIR, f"{args.agent_arch}_results_webshop.csv")
     runned_ids = get_runned_ids(REWARD_LOG_FILE)
     if runned_ids is None:
         evaluate_ids = all_task_ids
@@ -97,7 +108,7 @@ if __name__ == "__main__":
 
     # running webshop evaluation
     with open(REWARD_LOG_FILE, "a") as f:
-        for i in evaluate_ids:
+        for i in tqdm(evaluate_ids):
             reward, subreward, task = evaluate(i, llm_name=args.llm, agent_arch=args.agent_arch, PROMPT_DEBUG_FLAG=args.debug)
             rewards.append(reward)
             reward_str = f"""{i}\t{task}\t{subreward}\t{reward}\n"""
@@ -111,21 +122,26 @@ if __name__ == "__main__":
     
     avg_reward = sum(rewards) / len(rewards)
     print(f"The average reward is: {avg_reward}")
+
+    # Fix up the columns and save the results to a csv file
+    df = pd.read_csv(REWARD_LOG_FILE, names=["id", "task", "subreward", "reward"], sep="\t")
+    df.to_csv(REWARD_LOG_FILE, index=False)
+
     
-    with open("complexity.csv") as f:
-        lines = f.readlines()
-        complexity = [line.split(',')[1].strip() for line in lines]
-    hard_reward = []
-    easy_reward = []
-    for i, c in enumerate(complexity):
-        if c == "easy":
-            easy_reward.append(rewards[i])
-        elif c == "hard":
-            hard_reward.append(rewards[i])
-        else:
-            raise ValueError("Invalid complexity value")
-    print(f"Average reward for easy tasks: {sum(easy_reward) / len(easy_reward)}")
-    print(f"Average reward for hard tasks: {sum(hard_reward) / len(hard_reward)}")
+    # with open("complexity.csv") as f:
+    #     lines = f.readlines()
+    #     complexity = [line.split(',')[1].strip() for line in lines]
+    # hard_reward = []
+    # easy_reward = []
+    # for i, c in enumerate(complexity):
+    #     if c == "easy":
+    #         easy_reward.append(rewards[i])
+    #     elif c == "hard":
+    #         hard_reward.append(rewards[i])
+    #     else:
+    #         raise ValueError("Invalid complexity value")
+    # print(f"Average reward for easy tasks: {sum(easy_reward) / len(easy_reward)}")
+    # print(f"Average reward for hard tasks: {sum(hard_reward) / len(hard_reward)}")
         
     
     
