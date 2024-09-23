@@ -13,11 +13,11 @@ source ~/.bashrc
 set -x -e
 conda activate agentlite
 
-MODEL_ID=$1
-MODEL_REVISION=${2:-main}
-AGENT_ARCH=${3:-act}
-DATASET_ARGS=${4:-"--dataset=HuggingFaceH4/AgentBoard-Webshop-test --split=test"}
-
+MODEL_ID=${1:-"Salesforce/xLAM-v0.1-r"}
+AGENT_ARCH=${2:-act}
+DATASET_ARGS=${3:-"--dataset=HuggingFaceH4/Webshop-AgentQ-dedup --split=train"}
+NUM_EXAMPLES=${4:-"-1"}
+OUTPUT_NAME=${5:-"results_webshop"}
 # Set the default directory path for AgentBoard
 AGENTBOARD_DIR="/admin/home/edward/work/agents/AgentBoard/agentboard/environment/WebShop"
 
@@ -26,15 +26,14 @@ HUB_REPO_ID="HuggingFaceH4/webshop-evals"
 # Start WebShop server in tmux session called `webshop`
 ./benchmark/webshop/start_webshop_server.sh $DATASET_ARGS
 
-
 # Test it is up and running
 sleep 30
-# curl -v http://127.0.0.1:3000/abc
-echo $MODEL_ID
+curl -v http://127.0.0.1:3000/abc
+
 # Start the vllm server in the background
 NUM_GPUS=$(nvidia-smi --list-gpus | wc -l)
 # Change output from /dev/null to vllm_server.log for debugging
-nohup vllm serve $MODEL_ID --revision $MODEL_REVISION --tensor-parallel-size $NUM_GPUS >vllm_server.log 2>&1 &
+nohup vllm serve $MODEL_ID --tensor-parallel-size $NUM_GPUS >vllm_server.log 2>&1 &
 
 # Capture the process ID (PID) of the vllm server
 VLLM_PID=$!
@@ -66,17 +65,17 @@ done
 echo "vLLM server is up and running."
 
 # Run evaluation script
-python benchmark/webshop/evaluate_webshop.py --llm $MODEL_ID --llm_revision $MODEL_REVISION --agent_arch $AGENT_ARCH
+python benchmark/webshop/generate_webshop.py --llm $MODEL_ID --agent_arch $AGENT_ARCH $DATASET_ARGS --output_name=$OUTPUT_NAME --num_examples=$NUM_EXAMPLES
 
 # Stop the vllm server
 shutdown_server
 
 # Push results to the Hub
-RESULTS_FILEPATH="eval_results/${MODEL_ID}/${MODEL_REVISION}/${AGENT_ARCH}_results_webshop.csv"
-TIMESTAMP=$(date +"%Y-%m-%dT%H-%M-%S")
-huggingface-cli upload --repo-type dataset --private $HUB_REPO_ID $RESULTS_FILEPATH eval_results/$MODEL_ID/$MODEL_REVISION/results_$AGENT_ARCH\_$TIMESTAMP.csv
+# RESULTS_FILEPATH=$(find eval_results/$MODEL_ID -type f \( -name "*.csv" \))
+# TIMESTAMP=$(date +"%Y-%m-%dT%H-%M-%S")
+# huggingface-cli upload --repo-type dataset --private $HUB_REPO_ID $RESULTS_FILEPATH eval_results/$MODEL_ID/results_$AGENT_ARCH\_$TIMESTAMP.csv
 
-# Delete local file
-rm $RESULTS_FILEPATH
+# # Delete local file
+# rm $RESULTS_FILEPATH
 
-echo "Done!"
+# echo "Done!"

@@ -40,6 +40,8 @@ def parse_action(string: str) -> tuple[str, dict, bool]:
         except json.JSONDecodeError:
             PARSE_FLAG = False
             return string, {}, PARSE_FLAG
+        if action_type == "FINISH": # TODO workaround as model was outputting FINISH instead of Finish
+            action_type = "Finish"
         return action_type, arguments, PARSE_FLAG
     else:
         PARSE_FLAG = False

@@ -57,6 +57,7 @@ class OpenAIChatLLM(BaseLLM):
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt},
             ],
+            temperature=self.temperature,
         )
         return response.choices[0].message.content
 
@@ -64,15 +65,21 @@ class VllmChatModel(BaseLLM):
     def __init__(self, llm_config: LLMConfig):
         super().__init__(llm_config)
         self.client = OpenAI(base_url="http://localhost:8000/v1", api_key="EMPTY")
+        self.message_history = []
 
     def run(self, prompt: str):
+        messages = [{"role": "user", "content": prompt},]
+        self.message_history.append(messages)
+        
         response = self.client.chat.completions.create(
             model=self.llm_name,
-            messages=[
-                {"role": "user", "content": prompt},
-            ],
+            messages=messages,
+            temperature=self.temperature,
         )
         return response.choices[0].message.content
+    
+    def reset_history(self):
+        self.message_history = []
 
 
 class LangchainLLM(BaseLLM):
