@@ -81,6 +81,12 @@ if __name__ == "__main__":
         help="Name of the language model",
     )
     parser.add_argument(
+        "--llm_revision",
+        type=str,
+        default="main",
+        help="Name of the language model",
+    )
+    parser.add_argument(
         "--agent_arch",
         type=str,
         choices=["react", "act", "planact", "planreact", "zs", "zst", "bolaa"],
@@ -96,7 +102,7 @@ if __name__ == "__main__":
     rewards = []
     all_task_ids = list(range(0, 251))
 
-    EVAL_RESULTS_DIR = os.path.join(EVAL_RESULTS_DIR, args.llm)
+    EVAL_RESULTS_DIR = os.path.join(EVAL_RESULTS_DIR, args.llm, args.llm_revision)
     if not os.path.exists(EVAL_RESULTS_DIR):
         os.makedirs(EVAL_RESULTS_DIR)
     REWARD_LOG_FILE = os.path.join(EVAL_RESULTS_DIR, f"{args.agent_arch}_results_webshop.csv")
